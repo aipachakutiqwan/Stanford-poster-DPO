@@ -86,16 +86,18 @@
 
   \begin{block}{Problem}
 
-    Aligning language models with human preferences has become a central challenge in NLP. While \textbf{Reinforcement Learning from Human Feedback (RLHF)} achieves strong results, its complexity, requiring simultaneous management of multiple models and costly online sampling, motivates simpler alternatives.
+    Aligning language models with human preferences has become a central challenge in NLP. While \textbf{Reinforcement Learning from Human Feedback (RLHF)} achieves strong results, its complexity, requiring simultaneous management of multiple models and costly online sampling, motivates simpler alternatives~\cite{christiano2023deepreinforcementlearninghuman}.
     
-    \textbf{Direct Preference Optimization (DPO)} addresses this by reformulating alignment as a classification problem, eliminating the need for an explicit reward model. However, DPO's effectiveness has been evaluated almost exclusively on open-ended generation tasks.
-    
-    \begin{figure}
+        \begin{figure}
         \centering
         \includegraphics[width=1\linewidth]{images/original-dpo-image.png}
         \caption{DPO optimizes for human preferences while avoiding reinforcement learning~\cite{rafailov2024directpreferenceoptimizationlanguage}.}
         \label{fig:original-dpo}
     \end{figure}
+
+    \textbf{Direct Preference Optimization (DPO)} addresses this by reformulating alignment as a classification problem, eliminating the need for an explicit reward model. However, DPO's effectiveness has been evaluated almost exclusively on open-ended generation tasks.
+    
+
 
     \textbf{Goal:} This work presents a comprehensive empirical evaluation of DPO applied to two underexplored tasks: paraphrase detection and Shakespearean sonnet generation, both using fine-tuned GPT-2 base models as starting points.
 
@@ -126,6 +128,14 @@
       \item $(x, y_w, y_l)$ represents a prompt and its preferred ($y_w$)/dispreferred ($y_l$) output pair
     \end{itemize}
 
+    \heading{Previous work}
+    \begin{itemize}
+      \item Prior sonnet work (Tian & Peng et al. 2022; Agnew et al. 2023; Walsh et al. 2024) uses heuristic evaluation or human scoring, no DPO post-training pipeline.
+      \item Prior DPO work on paraphrases (Lübbers et al. 2025; Chen et al. 2026) targets generation, not detection. 
+      \item This work delivers one of the first empirical evaluations of DPO on two unexplored tasks: Paraphrase detection and Shakesperean sonnet generation.
+    \end{itemize}
+
+
   \end{block}
 
 \end{column}
@@ -136,7 +146,7 @@
 
   \begin{block}{Methods}
 
-    The research methodology is organized into a sequential two phases starting from a fine-tuned GPT-2 base model.
+    The research methodology is organized into a sequential two phases starting from a GPT-2 base model.
     
     \textbf{Phase I: Supervised Fine-Tuning (SFT)}
     \begin{enumerate}
@@ -152,33 +162,31 @@
 
   \end{block}
 
-  \begin{block}{Experiments}
+  \begin{block}{DPO Experiments}
 
     \heading{Paraphrase Identification}
     \begin{itemize}
-      \item \textbf{Inputs}: Sentence pair. \textbf{Outputs}: Paraphrase classification (Binary).
-      \item \textbf{Results}: Consistent, modest improvements. Test accuracy improved from 0.840 to 0.850. Validation metrics similarly showed marginal gains over the strong SFT baseline.
+      \item \textbf{Inputs}: Chosen/rejected paraphrase pairs. \textbf{Outputs}: Post-trained Paraphrase classification model.
+      \item \textbf{Results}: Consistent, modest improvements.
     \end{itemize}
 
-    \begin{table}
-      \centering
-      \begin{tabular}{l c c c c | c}
-        \toprule
-         & \multicolumn{4}{c|}{\textbf{Validation Dataset}} & \textbf{Test Dataset} \\
-         & \textbf{Accuracy} & \textbf{F1} & \textbf{Precision} & \textbf{Recall} & \textbf{Accuracy} \\
-        \midrule
-        Baseline (SFT) & 0.897 & 0.892 & 0.887 & 0.899 & 0.840 \\
-        DPO Refined & 0.899 & 0.892 & 0.890 & 0.895 & \textbf{0.850} \\
-        \bottomrule
-      \end{tabular}
-      \caption{Evaluation results for Paraphrase detection.}
-    \end{table}
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.7\linewidth]{images/paraphrase-detection-results.png}
+
+    \end{figure}
 
     \heading{Sonnet Generation}
     \begin{itemize}
-      \item \textbf{Inputs}: 3 initial lines. \textbf{Outputs}: 11 remaining lines completing the sonnet.
-      \item \textbf{Results}: Quantitative \textbf{chrF} scores (character n-gram F-score) showed mixed results. It increased from 41.543 to 42.690 on validation but slightly decreased from 41.890 to 41.622 on the test set.
+      \item \textbf{Inputs}: Chosen/rejected sonnets. \textbf{Outputs}: Post-trained Sonnet generation model.
+      \item \textbf{Results}: \textbf{chrF} scores showed mixed results. Slightly decreased from 41.890 to 41.622 on the test set.
     \end{itemize}
+
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.7\linewidth]{images/sonnet-generation-results.png}
+
+    \end{figure}
 
   \end{block}
 
@@ -190,25 +198,26 @@
 
   \begin{block}{Analysis}
 
-    A qualitative analysis of the generated sonnets confirms that the text produced after applying DPO is \textbf{substantially better} across multiple dimensions invisible to automatic n-gram metrics like chrF.
+    \textbf{Sonnets Generation:} Text produced after applying DPO is \textbf{substantially better} across multiple dimensions invisible to automatic n-gram metrics like chrF.
     
-    \heading{Structural and Stylistic Fidelity}
-    \begin{itemize}
-      \item \textbf{14-Line Target:} The DPO model strictly hits the 14-line sonnet target and avoids catastrophic generation collapse.
-      \item \textbf{Rhyme Schemes:} While neither model perfected ABAB CDCD EFEF GG, the baseline failed completely whereas DPO makes genuine \textit{slant-rhyme} attempts in continuations.
-      \item \textbf{Thematic Coherence:} The baseline loses its thematic thread within 3 to 4 lines. The DPO model typically sustains the original theme for 6 to 9 lines before drifting.
-      \item \textbf{Vocabulary:} The DPO model limits hallucinatory/invented words (12 down from 19 in baseline), producing plausible archaisms instead of noise.
-    \end{itemize}
+    \begin{figure}
+        \centering
+        \includegraphics[width=1\linewidth]{images/sonnets-analysis.png}
+    \end{figure}
 
-    \textbf{Paraphrase Identification:} Our deep dive into edge cases revealed semantic ambiguity on labels. Often human annotators struggle on these boundary cases, which explains the constrained mathematical improvement ceiling post-SFT.
+
+    \textbf{Paraphrase Identification:} Our deep dive into edge cases revealed semantic ambiguity on labels. Often human annotators struggle on these boundary cases and relatively strong baseline performance explains the constrained mathematical improvement ceiling post-SFT.
 
   \end{block}
 
   \begin{alertblock}{Conclusions}
 
     \begin{itemize}
-      \item DPO brings measurable, observable value beyond its originally demonstrated open-ended text domains, proving effective for highly constrained creative tasks and offering marginal gains in discriminative classification.
+      \item DPO brings measurable, observable value beyond its originally demonstrated open-ended text domains, proving effective for constrained creative tasks and offering marginal gains in discriminative classification.
       \item Our sonnet generation findings expose a critical gap between automatic evaluations (e.g. chrF) and genuine stylistic quality in text generation. The true improvements of preference alignment are often structurally profound but formally hard to quantify.
+      \item GPT-2's small capacity caps gains; preference data was generated by a single teacher model, introducing potential
+bias toward Gemini’s stylistic preferences.
+      \item Future: Larger models. Iterative DPO sonnet-specific evaluation metrics incorporating rhyme, meter and volta.
     \end{itemize}
 
   \end{alertblock}
@@ -216,7 +225,7 @@
   \begin{block}{References}
 
     \nocite{*}
-    \footnotesize{\bibliographystyle{plain}\bibliography{poster}}
+    {\footnotesize \bibliographystyle{plain}\bibliography{poster}}
 
   \end{block}
 
