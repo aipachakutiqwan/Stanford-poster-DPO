@@ -36,22 +36,21 @@
 \newcommand{\separatorcolumn}{\begin{column}{\sepwidth}\end{column}}
 
 
-\title{Your Title Goes Here}
+\title{Direct Preference Optimization: From Paraphrase Detection to Shakespearean Sonnet Generation}
 
 
-\author{Rylan Schaeffer \inst{1} \and Ben Bitdiddle \inst{2} \and Lem E. Tweakit \inst{2}}
+\author{Florencio Paucar}
 
-\institute[shortinst]{\inst{1} Department of Computer Science}
-\institute[shortinst]{\inst{1} Computer Science, Stanford \samelineand \inst{2} Another Institute}
+\institute[shortinst]{Department of Computer Science, Stanford University}
 
 % ====================
 % Footer (optional)
 % ====================
 
 \footercontent{
-  \href{rylanschaeffer.github.io}{rylanschaeffer.github.io} \hfill
-  NeurIPS 2021 Workshop: Metacognition in the Age of AI \hfill
-  \href{mailto:rylanschaeffer@gmail.com}{rylanschaeffer@gmail.com}}
+  \href{mailto:fpaucar@stanford.edu}{fpaucar@stanford.edu} \hfill
+  Stanford CS224N Default Project \hfill
+  }
 % (can be left out to remove footer)
 
 % ====================
@@ -85,71 +84,59 @@
 
 \begin{column}{\colwidth}
 
-  \begin{block}{Introduction}
+  \begin{block}{Problem}
 
-    Some block contents, followed by a diagram, followed by a dummy paragraph.
-
-    \begin{figure}
-      \centering
-      \begin{tikzpicture}[scale=6]
-        \draw[step=0.25cm,color=gray] (-1,-1) grid (1,1);
-        \draw (1,0) -- (0.2,0.2) -- (0,1) -- (-0.2,0.2) -- (-1,0)
-          -- (-0.2,-0.2) -- (0,-1) -- (0.2,-0.2) -- cycle;
-      \end{tikzpicture}
-      \caption{A figure caption.}
+    Aligning language models with human preferences has become a central challenge in NLP. While \textbf{Reinforcement Learning from Human Feedback (RLHF)} achieves strong results, its complexity, requiring simultaneous management of multiple models and costly online sampling, motivates simpler alternatives~\cite{christiano2023deepreinforcementlearninghuman}.
+    
+        \begin{figure}
+        \centering
+        \includegraphics[width=1\linewidth]{images/original-dpo-image.png}
+        \caption{DPO optimizes for human preferences while avoiding reinforcement learning~\cite{rafailov2024directpreferenceoptimizationlanguage}.}
+        \label{fig:original-dpo}
     \end{figure}
 
-    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi ultricies
-    eget libero ac ullamcorper. Integer et euismod ante. Aenean vestibulum
-    lobortis augue, ut lobortis turpis rhoncus sed. Proin feugiat nibh a
-    lacinia dignissim. Proin scelerisque, risus eget tempor fermentum, ex
-    turpis condimentum urna, quis malesuada sapien arcu eu purus.
-
-  \end{block}
-
-  \begin{block}{Background: Metacognition}
-
-    Nam vulputate nunc felis, non condimentum lacus porta ultrices. Nullam sed
-    sagittis metus. Etiam consectetur gravida urna quis suscipit.
-
-    \begin{itemize}
-      \item \textbf{Mauris tempor} risus nulla, sed ornare
-      \item \textbf{Libero tincidunt} a duis congue vitae
-      \item \textbf{Dui ac pretium} morbi justo neque, ullamcorper
-    \end{itemize}
-
-    Eget augue porta, bibendum venenatis tortor.
-
-  \end{block}
-  
-    \begin{block}{Background: Reinforcement Learning}
+    \textbf{Direct Preference Optimization (DPO)} addresses this by reformulating alignment as a classification problem, eliminating the need for an explicit reward model. However, DPO's effectiveness has been evaluated almost exclusively on open-ended generation tasks.
     
-    \end{block}
 
-  \begin{alertblock}{A highlighted block}
 
-    This block catches your eye, so \textbf{important stuff} should probably go
-    here.
+    \textbf{Goal:} This work presents a comprehensive empirical evaluation of DPO applied to two underexplored tasks: paraphrase detection and Shakespearean sonnet generation, both using fine-tuned GPT-2 base models as starting points.
 
-    Curabitur eu libero vehicula, cursus est fringilla, luctus est. Morbi
-    consectetur mauris quam, at finibus elit auctor ac. Aliquam erat volutpat.
-    Aenean at nisl ut ex ullamcorper eleifend et eu augue. Aenean quis velit
-    tristique odio convallis ultrices a ac odio.
+  \end{block}
 
+  \begin{block}{Background}
+
+    These tasks introduce distinct challenges:
     \begin{itemize}
-      \item \textbf{Fusce dapibus tellus} vel tellus semper finibus. In
-        consequat, nibh sed mattis luctus, augue diam fermentum lectus.
-      \item \textbf{In euismod erat metus} non ex. Vestibulum luctus augue in
-        mi condimentum, at sollicitudin lorem viverra.
-      \item \textbf{Suspendisse vulputate} mauris vel placerat consectetur.
-        Mauris semper, purus ac hendrerit molestie, elit mi dignissim odio, in
-        suscipit felis sapien vel ex.
+      \item \textbf{Paraphrase detection} offers limited room for improvement given strong supervised baselines.
+      \item \textbf{Sonnet generation} demands strict structural and stylistic adherence, which is inherently subjective to evaluate.
     \end{itemize}
 
-    Aenean tincidunt risus eros, at gravida lorem sagittis vel. Vestibulum ante
-    ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae.
+    \heading{DPO Formulation}
+    
+    DPO optimizes the policy directly on preference-labeled datasets using a binary cross-entropy loss:
+    
+    $$
+    L_{DPO}(\pi_\theta; \pi_{ref}) = - \mathbb{E}_{(x, y_w, y_l) \sim D} \left[ \log \sigma \left( \beta \log \frac{\pi_\theta(y_w \mid x)}{\pi_{ref}(y_w \mid x)} - \beta \log \frac{\pi_\theta(y_l \mid x)}{\pi_{ref}(y_l \mid x)} \right) \right]
+    $$
+    
+    Where:
+    \begin{itemize}
+      \item $\sigma$ is the sigmoid function
+      \item $\pi_\theta$ represents the model being optimized
+      \item $\pi_{ref}$ is a fixed pretrained or fine-tuned base model
+      \item $\beta$ is a temperature parameter controlling the strength of the preference signal
+      \item $(x, y_w, y_l)$ represents a prompt and its preferred ($y_w$)/dispreferred ($y_l$) output pair
+    \end{itemize}
 
-  \end{alertblock}
+    \heading{Previous work}
+    \begin{itemize}
+      \item Prior sonnet work (Tian & Peng et al. 2022; Agnew et al. 2023; Walsh et al. 2024) uses heuristic evaluation or human scoring, no DPO post-training pipeline.
+      \item Prior DPO work on paraphrases (Lübbers et al. 2025; Chen et al. 2026) targets generation, not detection. 
+      \item This work delivers one of the first empirical evaluations of DPO on two unexplored tasks: Paraphrase detection and Shakesperean sonnet generation.
+    \end{itemize}
+
+
+  \end{block}
 
 \end{column}
 
@@ -157,89 +144,49 @@
 
 \begin{column}{\colwidth}
 
-  \begin{block}{A block containing an enumerated list}
+  \begin{block}{Methods}
 
-    Vivamus congue volutpat elit non semper. Praesent molestie nec erat ac
-    interdum. In quis suscipit erat. \textbf{Phasellus mauris felis, molestie
-    ac pharetra quis}, tempus nec ante. Donec finibus ante vel purus mollis
-    fermentum. Sed felis mi, pharetra eget nibh a, feugiat eleifend dolor. Nam
-    mollis condimentum purus quis sodales. Nullam eu felis eu nulla eleifend
-    bibendum nec eu lorem. Vivamus felis velit, volutpat ut facilisis ac,
-    commodo in metus.
-
+    The research methodology is organized into a sequential two phases starting from a GPT-2 base model.
+    
+    \textbf{Phase I: Supervised Fine-Tuning (SFT)}
     \begin{enumerate}
-      \item \textbf{Morbi mauris purus}, egestas at vehicula et, convallis
-        accumsan orci. Orci varius natoque penatibus et magnis dis parturient
-        montes, nascetur ridiculus mus.
-      \item \textbf{Cras vehicula blandit urna ut maximus}. Aliquam blandit nec
-        massa ac sollicitudin. Curabitur cursus, metus nec imperdiet bibendum,
-        velit lectus faucibus dolor, quis gravida metus mauris gravida turpis.
-      \item \textbf{Vestibulum et massa diam}. Phasellus fermentum augue non
-        nulla accumsan, non rhoncus lectus condimentum.
+      \item Full-parameter fine-tuning on the Quora Question Pairs dataset for paraphrase detection.
+      \item Causal language modeling fine-tuning on a Shakespearean sonnets dataset.
     \end{enumerate}
 
+    \textbf{Phase II: Direct Preference Optimization (DPO)}
+    \begin{itemize}
+      \item \textbf{Data Preparation}: Gemini 2.5 Flash acted as a high-capacity teacher model to generate preference labels for both tasks.
+      \item \textbf{Model Optimization}: Fine-tune the initial SFT policy $\pi_\theta$ by minimizing the $L_{DPO}$ loss function, keeping the starting checkpoint as the reference model $\pi_{ref}$ to prevent distributional drift.
+    \end{itemize}
+
   \end{block}
 
-  \begin{block}{Fusce aliquam magna velit}
+  \begin{block}{DPO Experiments}
 
-    Et rutrum ex euismod vel. Pellentesque ultricies, velit in fermentum
-    vestibulum, lectus nisi pretium nibh, sit amet aliquam lectus augue vel
-    velit. Suspendisse rhoncus massa porttitor augue feugiat molestie. Sed
-    molestie ut orci nec malesuada. Sed ultricies feugiat est fringilla
-    posuere.
+    \heading{Paraphrase Identification}
+    \begin{itemize}
+      \item \textbf{Inputs}: Chosen/rejected paraphrase pairs. \textbf{Outputs}: Post-trained Paraphrase classification model.
+      \item \textbf{Results}: Consistent, modest improvements.
+    \end{itemize}
 
     \begin{figure}
-      \centering
-      \begin{tikzpicture}
-        \begin{axis}[
-            scale only axis,
-            no markers,
-            domain=0:2*pi,
-            samples=100,
-            axis lines=center,
-            axis line style={-},
-            ticks=none]
-          \addplot[red] {sin(deg(x))};
-          \addplot[blue] {cos(deg(x))};
-        \end{axis}
-      \end{tikzpicture}
-      \caption{Another figure caption.}
+        \centering
+        \includegraphics[width=0.7\linewidth]{images/paraphrase-detection-results.png}
+
     \end{figure}
 
-  \end{block}
-
-  \begin{block}{Nam cursus consequat egestas}
-
-    Nulla eget sem quam. Ut aliquam volutpat nisi vestibulum convallis. Nunc a
-    lectus et eros facilisis hendrerit eu non urna. Interdum et malesuada fames
-    ac ante \textit{ipsum primis} in faucibus. Etiam sit amet velit eget sem
-    euismod tristique. Praesent enim erat, porta vel mattis sed, pharetra sed
-    ipsum. Morbi commodo condimentum massa, \textit{tempus venenatis} massa
-    hendrerit quis. Maecenas sed porta est. Praesent mollis interdum lectus,
-    sit amet sollicitudin risus tincidunt non.
-
-    Etiam sit amet tempus lorem, aliquet condimentum velit. Donec et nibh
-    consequat, sagittis ex eget, dictum orci. Etiam quis semper ante. Ut eu
-    mauris purus. Proin nec consectetur ligula. Mauris pretium molestie
-    ullamcorper. Integer nisi neque, aliquet et odio non, sagittis porta justo.
-
+    \heading{Sonnet Generation}
     \begin{itemize}
-      \item \textbf{Sed consequat} id ante vel efficitur. Praesent congue massa
-        sed est scelerisque, elementum mollis augue iaculis.
-        \begin{itemize}
-          \item In sed est finibus, vulputate
-            nunc gravida, pulvinar lorem. In maximus nunc dolor, sed auctor eros
-            porttitor quis.
-          \item Fusce ornare dignissim nisi. Nam sit amet risus vel lacus
-            tempor tincidunt eu a arcu.
-          \item Donec rhoncus vestibulum erat, quis aliquam leo
-            gravida egestas.
-        \end{itemize}
-      \item \textbf{Sed luctus, elit sit amet} dictum maximus, diam dolor
-        faucibus purus, sed lobortis justo erat id turpis.
-      \item \textbf{Pellentesque facilisis dolor in leo} bibendum congue.
-        Maecenas congue finibus justo, vitae eleifend urna facilisis at.
+      \item \textbf{Inputs}: Chosen/rejected sonnets. \textbf{Outputs}: Post-trained Sonnet generation model.
+      \item \textbf{Results}: \textbf{chrF} scores showed mixed results. Slightly decreased from 41.890 to 41.622 on the test set.
     \end{itemize}
+
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.7\linewidth]{images/sonnet-generation-results.png}
+
+    \end{figure}
 
   \end{block}
 
@@ -249,76 +196,36 @@
 
 \begin{column}{\colwidth}
 
-  \begin{block}{A block containing some math}
+  \begin{block}{Analysis}
 
-    Nullam non est elit. In eu ornare justo. Maecenas porttitor sodales lacus,
-    ut cursus augue sodales ac.
+    \textbf{Sonnets Generation:} Text produced after applying DPO is \textbf{substantially better} across multiple dimensions invisible to automatic n-gram metrics like chrF.
+    
+    \begin{figure}
+        \centering
+        \includegraphics[width=1\linewidth]{images/sonnets-analysis.png}
+    \end{figure}
 
-    $$
-    \int_{-\infty}^{\infty} e^{-x^2}\,dx = \sqrt{\pi}
-    $$
 
-    Interdum et malesuada fames $\{1, 4, 9, \ldots\}$ ac ante ipsum primis in
-    faucibus. Cras eleifend dolor eu nulla suscipit suscipit. Sed lobortis non
-    felis id vulputate.
-
-    \heading{A heading inside a block}
-
-    Praesent consectetur mi $x^2 + y^2$ metus, nec vestibulum justo viverra
-    nec. Proin eget nulla pretium, egestas magna aliquam, mollis neque. Vivamus
-    dictum $\mathbf{u}^\intercal\mathbf{v}$ sagittis odio, vel porta erat
-    congue sed. Maecenas ut dolor quis arcu auctor porttitor.
-
-    \heading{Another heading inside a block}
-
-    Sed augue erat, scelerisque a purus ultricies, placerat porttitor neque.
-    Donec $P(y \mid x)$ fermentum consectetur $\nabla_x P(y \mid x)$ sapien
-    sagittis egestas. Duis eget leo euismod nunc viverra imperdiet nec id
-    justo.
+    \textbf{Paraphrase Identification:} Our deep dive into edge cases revealed semantic ambiguity on labels. Often human annotators struggle on these boundary cases and relatively strong baseline performance explains the constrained mathematical improvement ceiling post-SFT.
 
   \end{block}
 
-  \begin{block}{Nullam vel erat at velit convallis laoreet}
+  \begin{block}{Conclusions}
 
-    Class aptent taciti sociosqu ad litora torquent per conubia nostra, per
-    inceptos himenaeos. Phasellus libero enim, gravida sed erat sit amet,
-    scelerisque congue diam. Fusce dapibus dui ut augue pulvinar iaculis.
-
-    \begin{table}
-      \centering
-      \begin{tabular}{l r r c}
-        \toprule
-        \textbf{First column} & \textbf{Second column} & \textbf{Third column} & \textbf{Fourth} \\
-        \midrule
-        Foo & 13.37 & 384,394 & $\alpha$ \\
-        Bar & 2.17 & 1,392 & $\beta$ \\
-        Baz & 3.14 & 83,742 & $\delta$ \\
-        Qux & 7.59 & 974 & $\gamma$ \\
-        \bottomrule
-      \end{tabular}
-      \caption{A table caption.}
-    \end{table}
-
-    Donec quis posuere ligula. Nunc feugiat elit a mi malesuada consequat. Sed
-    imperdiet augue ac nibh aliquet tristique. Aenean eu tortor vulputate,
-    eleifend lorem in, dictum urna. Proin auctor ante in augue tincidunt
-    tempor. Proin pellentesque vulputate odio, ac gravida nulla posuere
-    efficitur. Aenean at velit vel dolor blandit molestie. Mauris laoreet
-    commodo quam, non luctus nibh ullamcorper in. Class aptent taciti sociosqu
-    ad litora torquent per conubia nostra, per inceptos himenaeos.
-
-    Nulla varius finibus volutpat. Mauris molestie lorem tincidunt, iaculis
-    libero at, gravida ante. Phasellus at felis eu neque suscipit suscipit.
-    Integer ullamcorper, dui nec pretium ornare, urna dolor consequat libero,
-    in feugiat elit lorem euismod lacus. Pellentesque sit amet dolor mollis,
-    auctor urna non, tempus sem.
+    \begin{itemize}
+      \item DPO brings measurable, observable value beyond its originally demonstrated open-ended text domains, proving effective for constrained creative tasks and offering marginal gains in discriminative classification.
+      \item Our sonnet generation findings expose a critical gap between automatic evaluations (e.g. chrF) and genuine stylistic quality in text generation. The true improvements of preference alignment are often structurally profound but formally hard to quantify.
+      \item Limitations: GPT-2's small capacity caps gains; preference data was generated by a single teacher model, introducing potential
+bias toward Gemini's stylistic preferences.
+      \item Future: Larger models. Iterative DPO sonnet-specific evaluation metrics incorporating rhyme, meter and volta.
+    \end{itemize}
 
   \end{block}
 
   \begin{block}{References}
 
     \nocite{*}
-    \footnotesize{\bibliographystyle{plain}\bibliography{poster}}
+    {\footnotesize \bibliographystyle{plain}\bibliography{poster}}
 
   \end{block}
 

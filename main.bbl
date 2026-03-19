@@ -1,0 +1,15 @@
+\begin{thebibliography}{1}
+
+\bibitem{christiano2023deepreinforcementlearninghuman}
+Paul Christiano, Jan Leike, Tom~B. Brown, Miljan Martic, Shane Legg, and Dario
+  Amodei.
+\newblock Deep reinforcement learning from human preferences, 2023.
+
+\bibitem{rafailov2024directpreferenceoptimizationlanguage}
+Rafael Rafailov, Archit Sharma, Eric Mitchell, Stefano Ermon, Christopher~D.
+  Manning, and Chelsea Finn.
+\newblock Direct preference optimization: Your language model is secretly a
+  reward model.
+\newblock 2024.
+
+\end{thebibliography}
